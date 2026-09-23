@@ -1,19 +1,7 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
+Somi Singh - City Guides
 
-> **This file is your submission.** Fill it in as you go — most sections get
-> written during the milestone that produces them, not at the end.
->
-> How the starter works, and every command you'll need, is in `RUNNING.md`.
-> Leave that file alone.
->
-> **Paste everything as text.** No screenshots, no video. A typed table gets
-> full credit; a picture of the same table gets none.
->
-> Delete these instruction blocks as you replace them. The `<!-- -->` comments
-> are notes to you and don't show up when the page renders — you can leave them
-> or remove them.
 
 ---
 
@@ -26,6 +14,8 @@
      this repo.
 
      Milestone 5. -->
+
+City Guides - the city guides corpus contains information about a region and its' cities. The information pertains to the region's and individual cities' food options, accomodations, accesibility and sight-seeing options. This system will return answers taken from these guides and answer questions a visitor would like to know. The system will maintain conversational memory, and allow the user to ask follow-up questions based on the previously provided answer.
 
 ## Chunking Strategy
 
