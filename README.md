@@ -15,7 +15,7 @@ Somi Singh - City Guides
 
      Milestone 5. -->
 
-City Guides - the city guides corpus contains information about a region and its' cities. The information pertains to the region's and individual cities' food options, accomodations, accesibility and sight-seeing options. This system will return answers taken from these guides and answer questions a visitor would like to know. The system will maintain conversational memory, and allow the user to ask follow-up questions based on the previously provided answer.
+City Guides - the city guides corpus contains information about a region and its' cities. The information pertains to the region's and individual cities' food options, accomodations, accesibility and sight-seeing options. This system will return answers taken from these guides and answer questions a visitor would like to know.
 
 ## Chunking Strategy
 
@@ -140,9 +140,9 @@ The difference between the average best distance for the in-corpus questions ver
 
      Milestone 5. -->
 
-**1.**
+**1.** I asked Claude to evaluate best options for the chunking function and to implement it. Claude suggested attaching the title and header to each subsection to compensate for the structure of the city guides documents.
 
-**2.**
+**2.** I used Claude to complete the task of running each question and putting in the table the best distance achieved. This assisted my decision to set the relevance cutoff at the midway point between the average best distance for in-corpus and out-of-scope questions.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
