@@ -101,7 +101,9 @@ year-round.
 ```
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.57
+
+The difference between the average best distance for the in-corpus questions versus out-of-scope questions is 0.57066. 
 
 <!-- The number you set in config.py, and how you got there.
 
@@ -114,7 +116,16 @@ year-round.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| When does the concert season run in Thornby Wells? | Yes | 0.2253 |
+| Is there anywhere to stay in Givens Mill? | Yes | 0.2717 |
+| How long does it take to see the museum in Brightwater? | Yes | 0.2902 |
+| Is Halden Bay open during winter? | Yes | 0.3008 |
+| Is Corry Vale difficult to navigate for someone with limited mobility? | Yes | 0.4197 |
+| What is the capital of Mongolia? | No | 0.8084 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.8338 |
+| How do I write a for loop in Rust? | No | 0.8538 |
+| How do I change the oil in a diesel engine? | No | 0.8831 |
+| Who won the 1994 World Cup? | No | 0.9819 |
 
 ## How I Used AI
 
