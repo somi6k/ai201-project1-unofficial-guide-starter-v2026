@@ -26,6 +26,8 @@ contains the answer.
 <!-- e.g. "One of my questions is about a topic only two documents mention, so
      I expect that one to be hard." -->
 
+The answers to the questions are in different sections of the documents with varying structure. 
+
 ---
 
 ## 2. Every answer names a source
@@ -35,6 +37,8 @@ Every answer the system produces names at least one source document.
 **Why this target:**
 <!-- Why all five and not four? What about your setup makes that achievable —
      or what would have to go wrong for it not to be? -->
+
+Every question is taken from a fact stated in one of the documents so none of the answers should be without a source.
 
 ---
 
@@ -53,6 +57,8 @@ in at least 4 of 5 tries.
 <!-- What did your distances look like when you set the cutoff in Milestone 4?
      Was there a clean gap, or did the two groups overlap? -->
 
+The corpus is well contained to questions a tourist would ask. Odd questions not related to the corpus should be rejected by the gate.
+
 ---
 
 ## 4. Something about your chunks
@@ -69,11 +75,11 @@ in at least 4 of 5 tries.
        - "No chunk is shorter than 200 characters, since anything below that
           in my corpus turned out to be a heading with no content under it." -->
 
-
+When a question is asked of the system, the returned chunks should be 1 or 2 sentences long in 4 out of 5 sampled chunks.
 
 **Why this target:**
 
-
+The corpus contains information seperated into distinct sections which are approximately two sentences long. Chunks smaller than this are unlikely to contain the correct answer.
 
 ---
 
@@ -87,10 +93,11 @@ in at least 4 of 5 tries.
      present — anything, as long as it names a number or an observable
      outcome. -->
 
-
+When I ask the system the best time of year to go, the answer and source document should be accurate every time.
 
 **Why this target:**
 
+The corpus contains the answer in a distict section for each city in the region. The system should not make a mistake in identifying the correct answer or providing the source.
 
 
 ---
