@@ -23,11 +23,44 @@ names a target of "4 of 5", and four of three is not a thing.
 
 QUESTIONS = [
     # {"question": "...", "expects": "..."},
-    {"When does the concert season run in Thornby Wells?": "", "September to April": ""},
-    {"Is there anywhere to stay in Given Mill?": "", "No": ""},
-    {"Is Halden Bay open during winter?": "", "No": ""},
-    {"Is Corry Vale difficult to navigate for someone with limited mobility?": "", "Yes": ""},
-    {"How long does it take to see the museum in Brightwater?": "", "90 minutes": ""},
+    # The comment under each one says where in the corpus the answer lives, so
+    # that a failure can be traced to a stage: wrong chunk retrieved is stage
+    # 4, right chunk and wrong answer is stage 5.
+    {
+        "question": "When does the concert season run in Thornby Wells?",
+        "expects": "September to April",
+        # guide_thornby_wells.md ## When to go
+    },
+    {
+        "question": "Is there anywhere to stay in Givens Mill?",
+        "expects": "Brightwater",
+        # guide_givens_mill.md ## Where to stay — "Nothing in the village
+        # itself. The nearest rooms are in Brightwater." Naming Brightwater is
+        # the part an answer can't get right by accident; "No" on its own
+        # would also match "Nothing", "not" and "north".
+    },
+    {
+        "question": "Is Halden Bay open during winter?",
+        "expects": "closed",
+        # guide_halden_bay.md ## When to go — "Winter is dramatic and largely
+        # closed", backed by ## Eat and drink, "much of it closes entirely
+        # from November to February".
+    },
+    {
+        "question": "Is Corry Vale difficult to navigate for someone with limited mobility?",
+        "expects": "no public transport",
+        # guide_accessibility.md ## Difficult — NOT guide_corry_vale.md, which
+        # never discusses mobility. A retrieval test as much as a generation
+        # one: the answer is a single sentence inside a section that covers
+        # four different places.
+    },
+    {
+        "question": "How long does it take to see the museum in Brightwater?",
+        "expects": "90 minutes",
+        # guide_brightwater.md ## What to see — "Allow 90 minutes." Watch this
+        # one: ## Getting there also says "90 minutes", about the drive to the
+        # airport, so it can score correct for the wrong reason.
+    },
 ]
 
 # Questions from a different world entirely. Your gate should refuse all five.

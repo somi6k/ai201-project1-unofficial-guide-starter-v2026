@@ -19,8 +19,8 @@ City Guides - the city guides corpus contains information about a region and its
 
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** 700
+**Overlap:** 30
 
 <!-- What about YOUR documents made you pick these numbers? Short posts and
      long sectioned guides don't want the same chunking, and "800 seemed
@@ -31,6 +31,8 @@ City Guides - the city guides corpus contains information about a region and its
      more than pretending you got it right first time.
 
      Milestone 3. -->
+
+Most subsections of the various guides in the corpus amount to 200-300 characters, with the largest being about 700. This chunk size and overlap allow most answers to be entirely returned within a relevant chunk. The strategy will be to attach the title and heading of each document, which contains the town name, to each the subsections which contain the relevant information. These will be the chunks with the 700 representing an upper limit for this corpus. 
 
 ## Sample Chunks
 
@@ -43,30 +45,49 @@ City Guides - the city guides corpus contains information about a region and its
 
      Milestone 3. -->
 
-**Chunk 1** — source: `` — produced by: ``
+======================================================================
+Chunk 1  |  source: guide_accessibility.md#0  |  produced by: chunker.py::split_documents
+======================================================================
+Getting around the region with limited mobility
 
-```
-```
+An honest assessment rather than a promotional one. Some of these places are
+difficult and it is better to know in advance.
 
-**Chunk 2** — source: `` — produced by: ``
+======================================================================
+Chunk 2  |  source: guide_corry_vale.md#5  |  produced by: chunker.py::split_documents
+======================================================================
+Corry Vale: Where to stay
 
-```
-```
+Perhaps thirty beds in the entire valley, spread across two pubs and a handful of farmhouse rooms. In summer these are booked months ahead. Camping is permitted on two marked fields and nowhere else.
 
-**Chunk 3** — source: `` — produced by: ``
+======================================================================
+Chunk 3  |  source: guide_givens_mill.md#3  |  produced by: chunker.py::split_documents
+======================================================================
+Givens Mill: Eat and drink
 
-```
-```
+A tearoom attached to the mill, open 10 to 4 daily except Tuesdays, which sells bread made from the flour ground twenty metres away and is the reason most people come. One pub, food served lunchtimes and Thursday to Saturday evenings.
 
-**Chunk 4** — source: `` — produced by: ``
+======================================================================
+Chunk 4  |  source: guide_kestrelford.md#6  |  produced by: chunker.py::split_documents
+======================================================================
+Kestrelford: When to go
 
-```
-```
+Late spring and early autumn. The Saturday market runs year-round but is much reduced from November to February. August is busy with walkers. The single-track approach road is genuinely difficult in snow and the town can be cut off for a day or two most winters.
 
-**Chunk 5** — source: `` — produced by: ``
+======================================================================
+Chunk 5  |  source: guide_regional_transport.md#1  |  produced by: chunker.py::split_documents
+======================================================================
+Getting around the region: Buses
 
-```
-```
+Three operators run in the region and they do not accept each other's tickets,
+which is the single most common source of confusion for visitors. Services
+concentrate on weekday daytimes. Sunday service is minimal to non-existent
+outside the Brightwater town routes.
+
+The Kestrelford service is hourly on weekdays, two-hourly on Saturdays, and
+does not run on Sundays. The Halden Bay coast service runs four times daily
+year-round.
+
 
 ## Sample Answer
 

@@ -24,11 +24,17 @@ CORPUS = os.getenv("AI201_CORPUS", "city_guides")
 
 
 # ─── Chunking (Milestone 3) ──────────────────────────────────────────────────
-# These are deliberately plain, generic numbers. Milestone 3 is where you
-# replace them with numbers that fit the documents you actually read.
+# `split_documents` cuts on markdown section boundaries, so these two no longer
+# set the size of a chunk — sections do. They are now a ceiling and a last
+# resort: a section over CHUNK_SIZE gets packed on paragraph breaks, and only a
+# single paragraph over CHUNK_SIZE falls back to overlapping character windows.
+# Nothing in `city_guides` reaches 800, so neither number fires on it.
+#
+# `fallback_split` still reads them the original way, as a fixed window size
+# and a fixed overlap, which is what makes the two strategies comparable.
 
-CHUNK_SIZE = 800        # characters per chunk
-CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
+CHUNK_SIZE = 700        # ceiling on a chunk, not the target size
+CHUNK_OVERLAP = 30     # characters shared between windows, last resort only
 
 
 # ─── Retrieval (Milestone 4) ─────────────────────────────────────────────────
