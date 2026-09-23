@@ -94,9 +94,11 @@ year-round.
 <!-- One complete question and answer, pasted as text, with the source line
      visible. Milestone 4. -->
 
-**Question:**
+**Question:** What is the best time of year to visit Pellew Sands?
 
-**Answer:**
+**Answer:** Based on the documents, June and September are recommended for visiting the beach without the crowds, while July and August are busy when the town is at its most itself. Winter is also noted as having a following among people who like that sort of thing. 
+
+Source: `guide_pellew_sands.md`
 
 ```
 ```
