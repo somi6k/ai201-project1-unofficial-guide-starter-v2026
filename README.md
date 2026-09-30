@@ -171,15 +171,72 @@ The difference between the average best distance for the in-corpus questions ver
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 4. When a question is asked of the system, the returned chunks should be 1 or 2 sentences long in 4 out of 5 sampled chunks. | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 5. When I ask the system the best time of year to go, the answer and source document should be accurate every time. | 5 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
 
 <!-- Underneath, paste the REAL output for each criterion from one of your
      runs — the actual text your system produced, not a description of it.
      Name the file and function that produced it. -->
+
+### When does the concert season run in Thornby Wells? — run 1
+
+- Best distance: 0.2253 (passed the gate)
+- Sources retrieved: guide_thornby_wells.md
+
+```
+The concert season in Thornby Wells runs from September to April (guide_thornby_wells.md).
+
+### Is there anywhere to stay in Givens Mill? — run 1
+
+- Best distance: 0.2717 (passed the gate)
+- Sources retrieved: guide_givens_mill.md
+
+```
+No, there is nowhere to stay in the village itself; the nearest rooms are in Brightwater (guide_givens_mill.md).
+```
+
+### Is there anywhere to stay in Givens Mill? — run 1
+
+- Best distance: 0.2717 (passed the gate)
+- Sources retrieved: guide_givens_mill.md
+
+```
+No, there is nothing in the village itself, and the nearest rooms are in Brightwater. (Source: `guide_givens_mill.md`)
+```
+
+### Is Halden Bay open during winter? — run 1
+
+- Best distance: 0.3008 (passed the gate)
+- Sources retrieved: guide_halden_bay.md, guide_seasons.md
+
+```
+Halden Bay is largely closed during the winter, and much of it closes entirely from November to February. 
+
+Sources: `guide_seasons.md` and `guide_halden_bay.md`
+```
+
+### Is Corry Vale difficult to navigate for someone with limited mobility? — run 1
+
+- Best distance: 0.4197 (passed the gate)
+- Sources retrieved: guide_accessibility.md, guide_corry_vale.md, guide_walking.md
+
+```
+Yes, getting around Corry Vale with limited mobility is difficult. The documents state that Corry Vale has villages two to four miles apart, no public transport, and footpaths rather than pavements. 
+
+Source: `guide_accessibility.md`
+```
+
+### How long does it take to see the museum in Brightwater? — run 1
+
+- Best distance: 0.2902 (passed the gate)
+- Sources retrieved: guide_accessibility.md, guide_brightwater.md, guide_givens_mill.md
+
+```
+Allow 90 minutes to see the museum in Brightwater. (Source: guide_brightwater.md)
+```
 
 ## Verdicts
 
