@@ -385,6 +385,8 @@ While the system does seem like it owuld be more robust and better able to handl
 
 ## What's Still Broken
 
+At this stage I did not identify any part of the system that is considered "broken". There may be bugs and further improvements but those would need to be teased out using further test questions and possible stronger critera.
+
 <!-- For each criterion still missed after your fix: what you'd do about it,
      and why you stopped where you did.
 
@@ -394,6 +396,9 @@ While the system does seem like it owuld be more robust and better able to handl
      Milestone 5. -->
 
 ## What I'd Do Differently
+
+Have not failed any critera neither before or after making code changes, I feel like I would need to be more creative and come up with stronger criteron in order to further pressure test this system.
+
 
 <!-- Knowing what you know now — which of your five criteria would you write
      differently, and why?
