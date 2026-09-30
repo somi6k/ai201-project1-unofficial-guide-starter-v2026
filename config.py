@@ -52,6 +52,34 @@ TOP_K = 5               # how many chunks to pull back per question
 THRESHOLD = 0.57
 
 
+# ─── Hybrid search (unit 2 stretch) ──────────────────────────────────────────
+# Vector search matches on meaning, BM25 matches on exact words, and they fail
+# on opposite things. With this on, `store.search` runs both and fuses the two
+# rankings. See keyword.py for why this corpus in particular wants it.
+#
+# Set AI201_HYBRID=0 to fall back to meaning-only retrieval. That is how the
+# before/after comparison in the run log was produced — same index, same
+# questions, one flag.
+HYBRID_SEARCH = os.getenv("AI201_HYBRID", "1") != "0"
+
+# How many chunks each retriever nominates before fusion. Has to be larger
+# than TOP_K or there is nothing for the fusion to choose between; the whole
+# point is that a chunk ranked 9th on meaning can finish 2nd overall.
+CANDIDATE_POOL = 20
+
+# Reciprocal rank fusion: a chunk scores WEIGHT / (RRF_K + rank) in each list
+# it appears in, and the scores add. Fusing on rank rather than on score is
+# what lets it combine a 0.31 cosine distance with an unbounded 7.4 BM25
+# score without inventing a conversion between them.
+#
+# RRF_K sets how flat the rank curve is. At the conventional 60, ranks 1 and 2
+# differ by about 2%, so appearing in *both* lists outweighs being first in
+# one — which is the behaviour we want from an agreement signal.
+RRF_K = 60
+VECTOR_WEIGHT = 1.0
+KEYWORD_WEIGHT = 1.0
+
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 # Embeddings run on your own machine and cost no API quota.
 # Only generation calls out to a service.

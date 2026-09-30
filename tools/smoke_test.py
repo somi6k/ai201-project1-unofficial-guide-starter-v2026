@@ -29,7 +29,7 @@ import config  # noqa: E402
 import generate  # noqa: E402
 from ingest import load_documents  # noqa: E402
 from chunker import split_documents, fallback_split  # noqa: E402
-from store import build_index, search  # noqa: E402
+from store import build_index, hybrid_search, search, vector_search  # noqa: E402
 import gate  # noqa: E402
 
 failures = []
@@ -91,11 +91,16 @@ def main():
 
         results = search("what should I know about this?", corpus=corpus)
         check(f"  retrieves", len(results) > 0, f"top-{len(results)}")
+
+        # Nearest-first is a property of the *vector* retriever. Hybrid search
+        # returns fused-rank order on purpose, so this asserts against
+        # `vector_search` rather than whichever retriever config selects.
+        ordered = vector_search("what should I know about this?", corpus=corpus)
         check(
-            f"  results are ordered nearest first",
+            f"  vector results are ordered nearest first",
             all(
-                results[i].distance <= results[i + 1].distance
-                for i in range(len(results) - 1)
+                ordered[i].distance <= ordered[i + 1].distance
+                for i in range(len(ordered) - 1)
             ),
         )
         check(
@@ -103,6 +108,22 @@ def main():
             all(0.0 <= r.distance <= 2.0 for r in results),
             f"range {min(r.distance for r in results):.3f}"
             f"–{max(r.distance for r in results):.3f}",
+        )
+
+        # Hybrid must not make the gate more permissive: the vector retriever
+        # already returns the globally closest chunks, so the best distance in
+        # a fused top-k can only be equal or worse, never better.
+        hybrid = hybrid_search("what should I know about this?", corpus=corpus)
+        check(
+            f"  hybrid retrieves, and cannot beat vector's best distance",
+            len(hybrid) > 0
+            and min(r.distance for r in hybrid) >= min(r.distance for r in ordered) - 1e-9,
+            f"vector {min(r.distance for r in ordered):.3f}, "
+            f"hybrid {min(r.distance for r in hybrid):.3f}",
+        )
+        check(
+            f"  hybrid labels which retriever found each chunk",
+            all(r.found_by in {"vector", "keyword", "both"} for r in hybrid),
         )
 
     print("\ncross-cutting")

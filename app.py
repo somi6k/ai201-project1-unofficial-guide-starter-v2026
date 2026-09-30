@@ -11,6 +11,9 @@ The Unofficial Guide — command line.
 
 Every command takes --corpus NAME to work with a different corpus without
 editing config.py.
+
+`retrieve` also takes --hybrid / --no-hybrid, which switches between the two
+retrievers in store.py for one call. See config.HYBRID_SEARCH.
 """
 
 import argparse
@@ -149,27 +152,49 @@ def cmd_retrieve(args):
     from store import search
     import gate
 
+    hybrid = config.HYBRID_SEARCH if args.hybrid is None else args.hybrid
+
     results = search(
         args.question,
         top_k=args.top_k or config.TOP_K,
         corpus=args.corpus or config.CORPUS,
         variant=args.variant,
+        hybrid=hybrid,
     )
 
     if not results:
         print("Nothing came back. Have you run `python app.py index`?")
         return
 
-    print(f"\nQuestion: {args.question}\n")
-    print(f"{'#':<3} {'distance':<10} {'source':<32} preview")
-    print("-" * 100)
-    for i, r in enumerate(results, 1):
-        preview = r.text[:52].replace("\n", " ")
-        print(f"{i:<3} {r.distance:<10.4f} {r.source:<32} {preview}...")
+    print(f"\nQuestion: {args.question}")
+    print(f"Retriever: {'hybrid (vector + BM25, fused on rank)' if hybrid else 'vector only'}\n")
+
+    if hybrid:
+        # vec / kw are each retriever's own rank for that chunk, so you can see
+        # what the fusion did: "vec#6 kw#2" placed 3rd means BM25 pulled it up.
+        print(f"{'#':<3} {'distance':<10} {'vec':<6} {'kw':<6} {'found by':<10} {'source':<30} preview")
+        print("-" * 118)
+        for i, r in enumerate(results, 1):
+            preview = r.text[:34].replace("\n", " ")
+            vec = f"#{r.vector_rank}" if r.vector_rank else "—"
+            kw = f"#{r.keyword_rank}" if r.keyword_rank else "—"
+            print(
+                f"{i:<3} {r.distance:<10.4f} {vec:<6} {kw:<6} {r.found_by:<10} "
+                f"{r.source:<30} {preview}..."
+            )
+    else:
+        print(f"{'#':<3} {'distance':<10} {'source':<32} preview")
+        print("-" * 100)
+        for i, r in enumerate(results, 1):
+            preview = r.text[:52].replace("\n", " ")
+            print(f"{i:<3} {r.distance:<10.4f} {r.source:<32} {preview}...")
 
     decision = gate.check(results)
     print(f"\nGate: {decision.explanation}")
     print("\nLower is better. 0.3 is a close match, 0.9 is unrelated.")
+    if hybrid:
+        print("Rows are in fused-rank order, so distance no longer runs top to bottom.")
+        print("The gate reads the best distance in the list, not the first row.")
     print("Milestone 4: run your five questions, then the five in OUT_OF_SCOPE")
     print("that your documents clearly don't cover, and look for the gap")
     print("between the two groups. Your cutoff goes in that gap.")
@@ -360,6 +385,16 @@ def build_parser():
     p_ret = sub.add_parser("retrieve", help="show distances only (Milestone 4)")
     p_ret.add_argument("question")
     p_ret.add_argument("--top-k", type=int)
+    p_ret.add_argument(
+        "--hybrid",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "run vector + BM25 and fuse the rankings. Defaults to "
+            f"config.HYBRID_SEARCH (currently {'on' if config.HYBRID_SEARCH else 'off'}); "
+            "--no-hybrid gives meaning-only retrieval for comparison"
+        ),
+    )
     p_ret.set_defaults(func=cmd_retrieve)
 
     p_ask = sub.add_parser("ask", help="ask a question")

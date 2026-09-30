@@ -149,6 +149,72 @@ The difference between the average best distance for the in-corpus questions ver
      claims earns nothing.
      ───────────────────────────────────────────────────────────────────────── -->
 
+### Stretch feature: hybrid search (vector + BM25)
+
+**Claiming this one.** Retrieval now runs two retrievers over the same index
+and fuses their rankings, instead of matching on meaning alone.
+
+- Keyword retrieval: `keyword_search.py::KeywordIndex.search`, BM25 via
+  `rank_bm25.BM25Okapi`, tokenised by `keyword_search.py::tokenize`.
+- Fusion: `store.py::hybrid_search`, reciprocal rank fusion — a chunk scores
+  `weight / (60 + rank)` in each list it appears in, and the scores add.
+- Entry point: `store.py::search` routes to `hybrid_search` or to the
+  unchanged `vector_search` depending on `config.HYBRID_SEARCH`. Every caller
+  already went through `search`, so nothing else needed editing, and
+  `AI201_HYBRID=0` or `python app.py retrieve "..." --no-hybrid` gives the
+  meaning-only baseline for comparison.
+
+**Why this corpus wants it.** Nine of the fourteen documents are town guides
+sharing one section template, and the town name appears in the H1 and almost
+nowhere else. The embedder has never seen "Thornby Wells" or "Pellew Sands",
+so on meaning alone those nine anonymous guides compete and the right one
+wins by a small margin. BM25 has the opposite profile: a chunk containing the
+literal token "Thornby" scores far above one that doesn't, *because* the word
+is rare. Numbers are the same story — "90 minutes" and "30 minutes" sit almost
+on top of each other as vectors and are plainly different as tokens.
+
+**The one design decision worth flagging.** `Result.distance` is still the
+cosine distance under both retrievers — the fused score is reported in a
+separate field, not written over it. That is what keeps the 0.57 cutoff and
+the ten-row table above valid: hybrid search changes which chunks come back
+and in what order, not what a distance means.
+
+It also means hybrid search cannot loosen the gate. The vector retriever
+already returns the globally closest chunks, so the best distance inside a
+fused top-5 can only be equal or worse, never better. Measured across all ten
+questions, best distance was **identical** in all ten and **no gate verdict
+changed** — five pass, five refuse, as before. `tools/smoke_test.py` asserts
+that property on every shipped corpus.
+
+**What it actually changed.** Ranking, on the question that needed it. "Is
+Corry Vale difficult to navigate for someone with limited mobility?" expects
+"no public transport", which lives in `guide_accessibility.md`, not in
+`guide_corry_vale.md`. Both retrievers return that chunk, but vector-only
+ranked it 3rd behind two Corry Vale chunks that never mention mobility;
+fusion promoted it to 1st, because it was the chunk both retrievers agreed on
+(vector #3, BM25 #3).
+
+```
+$ python app.py retrieve "Is Corry Vale difficult to navigate for someone with limited mobility?"
+#   distance   vec    kw     found by   source
+1   0.4850     #3     #3     both       guide_accessibility.md    <- "no public transport"
+2   0.5115     #5     #4     both       guide_corry_vale.md
+3   0.4197     #1     #9     both       guide_corry_vale.md
+4   0.4920     #4     #8     both       guide_accessibility.md
+5   0.7116     #12    #1     both       guide_accessibility.md
+
+$ python app.py retrieve "..." --no-hybrid
+1   0.4197  guide_corry_vale.md     (Getting around — never mentions mobility)
+2   0.4482  guide_walking.md
+3   0.4850  guide_accessibility.md  <- the chunk with the answer, ranked 3rd
+4   0.4920  guide_corry_vale.md
+5   0.5115  guide_corry_vale.md
+```
+
+Rows are in fused-rank order, so distance no longer runs top to bottom. The
+gate reads the best distance in the list rather than the first row — it always
+did (`gate.py::check` takes `min`), which is why the switch was safe.
+
 ---
 
 # Unit 2
@@ -251,11 +317,11 @@ Allow 90 minutes to see the museum in Brightwater. (Source: guide_brightwater.md
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | For at least 4 of my 5 test questions, the retrieved chunks include one that contains the answer. | Met | Every test question contains a chunk with the correct answer. |
+| 2 | Every answer the system produces names at least one source document. | Met | Each in-scope question names at least once source, thus meeting the critera. |
+| 3 | When I ask a question my documents clearly don't cover, the relevance gate stops it and the system returns "I don't have enough information about that" — in at least 4 of 5 tries. | Met | Out-of-scope questions are all returned with the "I don't have enough" message. |
+| 4 | When a question is asked of the system, the returned chunks should be 1 or 2 sentences long in 4 out of 5 sampled chunks. | Met | Each answer matches the critera of the answer being limited to 1-2 sentences. |
+| 5 | When I ask the system the best time of year to go, the answer and source document should be accurate every time. | Met  | The answers produced contained the correct answer and source. |
 
 ## Diagnoses
 
@@ -277,11 +343,18 @@ Allow 90 minutes to see the museum in Brightwater. (Source: guide_brightwater.md
 
      Milestone 3. -->
 
+There were no misses using the above test runs against the given critera. I did not change any of the stages because the criteron were met in all cases. Looking over the critera, I perhaps could have made them slightly less specific and guaranteed to produce the correct answer but I would need to be careful not to make them so vague as to become opinonated versus being strictly factual-based.
+
 ## The Improvement
 
 **What I changed:**
 
+I implemented a hybrid search BM25 option using Claude AI asssitance. The new results return in a fused listing with keyword matching and relevency taken into consideration.
+
 **Why I picked it:**
+
+I wanted to see if there would be an improvement or regression after implementing a 2nd ranking method.
+
 
 <!-- Connect it to a specific diagnosis above in one sentence. If you can't,
      you picked a fix because it sounded impressive. -->
@@ -293,13 +366,15 @@ Allow 90 minutes to see the museum in Brightwater. (Source: guide_brightwater.md
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 4. When a question is asked of the system, the returned chunks should be 1 or 2 sentences long in 4 out of 5 sampled chunks. | 4 of 5 | 5/5 | 5/5 | 5/5 | Met |
+| 5. When I ask the system the best time of year to go, the answer and source document should be accurate every time. | 5 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
 
 **Did it help?**
+
+While the system does seem like it owuld be more robust and better able to handle edge cases, the results for the critera and test questions as previously written did not change, and it is still passing all critera 5/5.
 
 <!-- Say plainly whether it did, and how you know. If it made things worse,
      say that — a change that backfired, honestly reported, earns full credit

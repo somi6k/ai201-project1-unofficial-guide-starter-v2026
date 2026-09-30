@@ -43,6 +43,30 @@ class Result:
     distance: float   # LOWER IS BETTER. 0.3 is close, 0.9 is unrelated.
     produced_by: str
 
+    # ── Hybrid search only; all three are None/0.0 under meaning-only search.
+    #
+    # `distance` above stays the cosine distance from the question to this
+    # chunk, always, under either retriever. That is deliberate and it is the
+    # load-bearing decision in this file: THRESHOLD is calibrated against
+    # cosine distances and the README's ten-row table is a table of cosine
+    # distances, so hybrid search is allowed to change *which* chunks come
+    # back and in *what order*, but not what a distance means. The fused
+    # score is reported separately, below, rather than written over it.
+    vector_rank: int | None = None    # 1-based rank in the vector list, or None
+    keyword_rank: int | None = None   # 1-based rank in the BM25 list, or None
+    fused_score: float = 0.0          # RRF score. HIGHER is better, unlike distance.
+
+    @property
+    def found_by(self) -> str:
+        """Which retriever(s) nominated this chunk — for the README evidence."""
+        if self.vector_rank and self.keyword_rank:
+            return "both"
+        if self.keyword_rank:
+            return "keyword"
+        if self.vector_rank:
+            return "vector"
+        return "—"
+
 
 _model = None
 
@@ -178,7 +202,43 @@ def build_index(
     return len(chunks)
 
 
-def search(
+def _open(corpus: str | None, variant: str):
+    """Get the collection, or say which command would have created it."""
+    name = config.collection_name(corpus, variant)
+    try:
+        return _client().get_collection(name)
+    except Exception as exc:
+        raise RuntimeError(
+            f"No index called '{name}'. Run `python app.py index` first."
+        ) from exc
+
+
+def _make_result(text, meta, distance, **ranks) -> Result:
+    return Result(
+        text=text,
+        source=str(meta.get("source", "unknown")),
+        label=f"{meta.get('source', 'unknown')}#{meta.get('index', 0)}",
+        distance=float(distance),
+        produced_by=str(meta.get("produced_by", "unknown")),
+        **ranks,
+    )
+
+
+def cosine_distance(a, b) -> float:
+    """
+    The same number Chroma's "cosine" space reports: 1 - cosine similarity.
+
+    Needed because BM25 can nominate a chunk that the vector query never
+    returned, and that chunk still has to carry a real cosine distance for the
+    gate to read. Computing it here from the stored embedding is exact and
+    costs no second trip through the embedder.
+    """
+    dot = sum(x * y for x, y in zip(a, b))
+    norm = (sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5)
+    return 1.0 - dot / norm if norm else 1.0
+
+
+def vector_search(
     question: str,
     top_k: int | None = None,
     corpus: str | None = None,
@@ -187,37 +247,125 @@ def search(
     """
     Retrieve the chunks closest in meaning to a question.
 
-    Returns them nearest-first, each with its distance.
+    Returns them nearest-first, each with its distance. This is the original
+    meaning-only retriever, unchanged — `search` still routes here when
+    `config.HYBRID_SEARCH` is off, which is what makes the before/after
+    comparison in the run log a fair one.
     """
     top_k = top_k or config.TOP_K
-    name = config.collection_name(corpus, variant)
-
-    try:
-        collection = _client().get_collection(name)
-    except Exception as exc:
-        raise RuntimeError(
-            f"No index called '{name}'. Run `python app.py index` first."
-        ) from exc
+    collection = _open(corpus, variant)
 
     raw = collection.query(
         query_embeddings=embed([question]),
         n_results=min(top_k, collection.count()),
     )
 
-    results: list[Result] = []
-    for text, meta, distance in zip(
-        raw["documents"][0], raw["metadatas"][0], raw["distances"][0]
-    ):
-        results.append(
-            Result(
-                text=text,
-                source=str(meta.get("source", "unknown")),
-                label=f"{meta.get('source', 'unknown')}#{meta.get('index', 0)}",
-                distance=float(distance),
-                produced_by=str(meta.get("produced_by", "unknown")),
-            )
+    return [
+        _make_result(text, meta, distance, vector_rank=rank)
+        for rank, (text, meta, distance) in enumerate(
+            zip(raw["documents"][0], raw["metadatas"][0], raw["distances"][0]), start=1
         )
-    return results
+    ]
+
+
+def hybrid_search(
+    question: str,
+    top_k: int | None = None,
+    corpus: str | None = None,
+    variant: str = "default",
+) -> list[Result]:
+    """
+    Retrieve on meaning and on exact words at once, and fuse the two rankings.
+
+    Both retrievers nominate `config.CANDIDATE_POOL` chunks. Reciprocal rank
+    fusion then scores every nominated chunk by where it placed in each list —
+    `weight / (RRF_K + rank)`, summed — so a chunk both retrievers liked beats
+    one that only the stronger retriever put first.
+
+    Results come back best-fused-first, which means they are NOT in ascending
+    distance order any more. `gate.check` takes the minimum rather than the
+    first element, so it is unaffected; anything else that assumed
+    `results[0]` was the closest chunk would need to say `min(...)` instead.
+    """
+    import keyword_search
+
+    top_k = top_k or config.TOP_K
+    collection = _open(corpus, variant)
+    pool = min(max(config.CANDIDATE_POOL, top_k), collection.count())
+
+    question_vector = embed([question])[0]
+
+    # ── Retriever 1: meaning.
+    raw = collection.query(query_embeddings=[question_vector], n_results=pool)
+    records: dict[str, dict] = {}
+    vector_ranks: dict[str, int] = {}
+    for rank, (chunk_id, text, meta, distance) in enumerate(
+        zip(raw["ids"][0], raw["documents"][0], raw["metadatas"][0], raw["distances"][0]),
+        start=1,
+    ):
+        records[chunk_id] = {"text": text, "meta": meta, "distance": float(distance)}
+        vector_ranks[chunk_id] = rank
+
+    # ── Retriever 2: exact words.
+    keyword_hits = keyword_search.load_index(collection).search(question, pool)
+    keyword_ranks = {chunk_id: rank for rank, (chunk_id, _) in enumerate(keyword_hits, start=1)}
+
+    # A BM25 hit from outside the vector pool has no distance yet. Fetch the
+    # stored embedding and work it out, rather than guessing or leaving a hole
+    # the gate would then read as "nothing close".
+    missing = [chunk_id for chunk_id in keyword_ranks if chunk_id not in records]
+    if missing:
+        fetched = collection.get(ids=missing, include=["documents", "metadatas", "embeddings"])
+        for chunk_id, text, meta, vector in zip(
+            fetched["ids"], fetched["documents"], fetched["metadatas"], fetched["embeddings"]
+        ):
+            records[chunk_id] = {
+                "text": text,
+                "meta": meta,
+                "distance": cosine_distance(question_vector, vector),
+            }
+
+    # ── Fuse on rank.
+    fused: dict[str, float] = {}
+    for chunk_id, rank in vector_ranks.items():
+        fused[chunk_id] = fused.get(chunk_id, 0.0) + config.VECTOR_WEIGHT / (config.RRF_K + rank)
+    for chunk_id, rank in keyword_ranks.items():
+        fused[chunk_id] = fused.get(chunk_id, 0.0) + config.KEYWORD_WEIGHT / (config.RRF_K + rank)
+
+    # Ties broken by distance, so the order is stable run to run rather than
+    # dependent on dict insertion order.
+    order = sorted(fused, key=lambda cid: (-fused[cid], records[cid]["distance"]))
+
+    return [
+        _make_result(
+            records[chunk_id]["text"],
+            records[chunk_id]["meta"],
+            records[chunk_id]["distance"],
+            vector_rank=vector_ranks.get(chunk_id),
+            keyword_rank=keyword_ranks.get(chunk_id),
+            fused_score=fused[chunk_id],
+        )
+        for chunk_id in order[:top_k]
+    ]
+
+
+def search(
+    question: str,
+    top_k: int | None = None,
+    corpus: str | None = None,
+    variant: str = "default",
+    hybrid: bool | None = None,
+) -> list[Result]:
+    """
+    Retrieve the chunks worth answering a question from.
+
+    The one entry point every caller uses. `config.HYBRID_SEARCH` picks the
+    retriever; pass `hybrid=` to override it for a single call, which is how
+    the two get compared side by side without editing config.
+    """
+    use_hybrid = config.HYBRID_SEARCH if hybrid is None else hybrid
+    retrieve = hybrid_search if use_hybrid else vector_search
+    return retrieve(question, top_k=top_k, corpus=corpus, variant=variant)
 
 
 def index_exists(corpus: str | None = None, variant: str = "default") -> bool:
